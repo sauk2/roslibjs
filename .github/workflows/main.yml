@@ -51,46 +51,32 @@ jobs:
   ci_ros:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        ros_distribution:
-          - noetic
-          - humble
-          - iron
-          - jazzy
-          - rolling
-        include:
-          # Noetic Ninjemys (May 2020 - May 2025)
-          - docker_image: ubuntu:focal
-            ros_distribution: noetic
-            ros_version: 1
-
-          # Humble Hawksbill (May 2022 - May 2027)
-          - docker_image: ubuntu:jammy
-            ros_distribution: humble
-            ros_version: 2
-
-          # Iron Irwini (May 2023 - November 2024)
-          - docker_image: ubuntu:jammy
-            ros_distribution: iron
-            ros_version: 2
-
-          # Jazzy Jalisco (May 2024 - May 2029)
-          - docker_image: ubuntu:noble
-            ros_distribution: jazzy
-            ros_version: 2
-
-          # Rolling Ridley (No End-Of-Life)
-          - docker_image: ubuntu:noble
-            ros_distribution: rolling
-            ros_version: 2
+        ros_distro: [noetic]
+        node_version: [18, 20]
     container:
-      image: ${{ matrix.docker_image }}
+      image: ubuntu:focal
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4.0.2
+        with:
+          cache: npm
+          node-version: ${{ matrix.node_version }}
       - name: Setup ROS environment
         uses: ros-tooling/setup-ros@v0.7
         with:
-          required-ros-distributions: ${{ matrix.ros_distribution }}
+          required-ros-distributions: ${{ matrix.ros_distro }}
       - name: Install dependencies
         run: |
           sudo apt update && sudo apt install --no-install-recommends -y \
-          ros-${{ matrix.ros_distribution }}-rosbridge-server
+          libasound2 \
+          libnss3 \
+          ros-${{ matrix.ros_distro }}-rosbridge-server \
+          ros-${{ matrix.ros_distro }}-tf2-web-republisher \
+          ros-${{ matrix.ros_distro }}-common-tutorials \
+          ros-${{ matrix.ros_distro }}-rospy-tutorials \
+          ros-${{ matrix.ros_distro }}-actionlib-tutorials
+      - name: Run tests
+        run: |
+          bash -c "source /opt/ros/${{ matrix.ros_distro }}/setup.bash && bash test/build.bash"
